@@ -3,4 +3,4 @@ deprecated/
 .ipynb_checkpoints/
 CLAUDE.md
 project.md
-
+*.log
