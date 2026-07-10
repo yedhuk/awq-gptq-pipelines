@@ -14,6 +14,42 @@ Current focus: **FP16 vs INT4 AWQ vs INT4 GPTQ** on `meta-llama/Llama-3.2-3B-Ins
 - Architecture changes (which layers/modules change under quantization)
 - Quantized kernel/backend verification (confirming the expected kernel path is actually used)
 
+## Results
+
+| Metric Group / Name | FP16 Baseline | AWQ Custom | GPTQ Custom |
+|---|---|---|---|
+| **Baseline (Pre-Load)** | | | |
+| baseline.cpu_resident_gb | 0.96 | 0.94 | 0.94 |
+| baseline.cpu_virtual_gb | 19.1 | 19.02 | 19.02 |
+| baseline.gpu_absolute_memory_usage_gb | 1.46 | 1.45 | 1.44 |
+| baseline.gpu_blindspot_gb | 1.46 | 1.45 | 1.44 |
+| **Post-Load** | | | |
+| post_load.load_time_seconds | 66.96 | 4.3 | 4.56 |
+| post_load.gpu_allocated_gb | 5.98 | 2.09 | 2.1 |
+| post_load.gpu_absolute_memory_usage_gb | 7.43 | 3.64 | 3.62 |
+| post_load.gpu_blindspot_gb | 1.43 | 1.47 | 1.47 |
+| post_load.gpu_reserved_gb | 6 | 2.16 | 2.15 |
+| post_load.gpu_peak_reserved_gb | 6 | 2.16 | 2.15 |
+| post_load.model_size_memory_gb | 5.98 | 2.09 | 2.1 |
+| post_load.reported_model_size_gb | 5.98 | 2.09 | 2.1 |
+| **Warmup Phase** | | | |
+| warmup.gpu_allocated_gb | 5.99 | 2.1 | 2.11 |
+| warmup.gpu_absolute_memory_usage_gb | 7.49 | 3.65 | 3.63 |
+| warmup.gpu_blindspot_gb | 1.48 | 1.49 | 1.48 |
+| warmup.gpu_reserved_gb | 6 | 2.16 | 2.15 |
+| warmup.gpu_peak_reserved_gb | 6 | 2.16 | 2.15 |
+| **Post-Inference (Evaluation Loop)** | | | |
+| post_inference.average_tokens_per_sec | 89.19 | 107.24 | 102.5 |
+| post_inference.average_inference_latency_seconds | 1.17 | 0.97 | 1.02 |
+| post_inference.average_inter_token_latency_seconds | 0.01 | 0.01 | 0.01 |
+| post_inference.ttft_average_seconds | 0.01 | 0.01 | 0.01 |
+| post_inference.peak_gpu_allocated_gb | 6.02 | 2.13 | 2.14 |
+| post_inference.gpu_absolute_memory_usage_gb | 7.52 | 3.67 | 3.66 |
+| post_inference.gpu_blindspot_gb | 1.49 | 1.48 | 1.47 |
+| post_inference.gpu_reserved_gb | 6.04 | 2.18 | 2.19 |
+| post_inference.gpu_peak_reserved_gb | 6.04 | 2.18 | 2.19 |
+| post_inference.total_execution_vram_overhead_gb | 6.02 | 2.13 | 2.14 |
+
 ## Project structure
 
 ```
