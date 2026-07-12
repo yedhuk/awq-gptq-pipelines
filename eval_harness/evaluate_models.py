@@ -1,0 +1,107 @@
+import os
+import json
+import torch
+import argparse
+import subprocess
+import lm_eval
+from lm_eval.models.huggingface import HFLM
+from lm_eval.utils import handle_non_serializable
+
+os.environ["HF_ALLOW_CODE_EVAL"] = "1"
+
+def run_benchmarks(model_path_or_id: str, output_path: str, is_quantized: bool = False):
+    print(f"Running benchmarks for model: {model_path_or_id}")
+    print(f"Initializing {model_path_or_id} for evaluation...")
+    
+    try:
+        subprocess.run(
+            ["git", "config", "--global", "--add", "safe.directory", "/workspace"],
+            check=True, 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.DEVNULL
+        )
+    except Exception:
+        pass
+    # 1. Setup Model Arguments
+    # The HFLM class accepts either an HF ID or a local path
+    model_kwargs = {
+        "pretrained": model_path_or_id,
+        "device": "cuda:0",
+        "batch_size": 1
+    }
+
+    # If the model is a standard FP16 base model, specify bfloat16/float16
+    # If it is AWQ/GPTQ quantized, the weights are 4-bit, but compute is usually done in fp16
+    if not is_quantized:
+        model_kwargs["dtype"] = torch.bfloat16
+    
+    # Initialize the model via the harness wrapper
+    lm = HFLM(**model_kwargs)
+
+    # 2. Define the exact benchmark tasks
+    tasks = ["wikitext", "mmlu", "gsm8k", "humaneval", "mbpp"]
+
+    print(f"Starting evaluation on tasks: {tasks}")
+    
+    # 3. Execute the evaluation
+    results = lm_eval.simple_evaluate(
+        model=lm,
+        tasks=tasks,
+        num_fewshot=0,
+        log_samples=True,
+        confirm_run_unsafe_code=True,
+    )
+
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+    # 4. Save the results
+    print(f"Saving comprehensive results to {output_path}")
+    with open(output_path, "w") as f:
+        json.dump(results, f, default=handle_non_serializable, indent=2)
+
+    # 5. Print Summary
+    print("\n" + "="*50)
+    print("EVALUATION SUMMARY")
+    print("="*50)
+    
+    task_results = results.get("results", {})
+    for task_name, metrics in task_results.items():
+        print(f"\nTask: {task_name.upper()}")
+        for metric_name, value in metrics.items():
+            if not metric_name.endswith("stderr") and metric_name != "alias":
+                formatted_val = f"{value:.4f}" if isinstance(value, float) else value
+                print(f"  - {metric_name}: {formatted_val}")
+
+if __name__ == "__main__":
+    # Setup argparse to handle dynamic inputs
+    parser = argparse.ArgumentParser(description="Run LLM Benchmarks (MMLU, GSM8K, Code, PPL)")
+    
+    parser.add_argument(
+        "--model", 
+        type=str, 
+        required=True, 
+        help="Hugging Face Hub ID or absolute path to a local model directory."
+    )
+    
+    parser.add_argument(
+        "--output", 
+        type=str, 
+        default="/workspace/benchmark_results.json", 
+        help="Path to save the JSON results."
+    )
+
+    parser.add_argument(
+        "--quantized", 
+        action="store_true", 
+        help="Flag to indicate if the model is quantized (AWQ/GPTQ)."
+    )
+    
+    args = parser.parse_args()
+    
+    # Run the evaluation
+    run_benchmarks(
+        model_path_or_id=args.model, 
+        output_path=args.output,
+        is_quantized=args.quantized
+    )

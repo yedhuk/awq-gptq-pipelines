@@ -1,0 +1,20 @@
+# Use the official Python 3.12 image
+FROM python:3.12
+
+# Set the working directory
+WORKDIR /app
+
+# Install git (required by some evaluation modules like code_eval)
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# Install PyTorch specifically for CUDA 13.0
+RUN pip install --no-cache-dir torch==2.11.0 --index-url https://download.pytorch.org/whl/cu130
+
+# Install the evaluation harness and dependencies
+RUN pip install --no-cache-dir transformers lm-eval evaluate accelerate
+
+# Copy your evaluation script into the container
+COPY evaluate_models.py .
+
+# Set the entrypoint
+ENTRYPOINT ["python", "evaluate_models.py"]
