@@ -1,0 +1,28 @@
+# Use the official NVIDIA CUDA 13.0 Development image (contains nvcc compiler)
+FROM nvidia/cuda:13.0.0-devel-ubuntu24.04
+
+# Set the working directory
+WORKDIR /workspace
+
+# Install Python 3.12, pip, and git
+RUN apt-get update && apt-get install -y \
+    python3.12 \
+    python3.12-venv \
+    python3-pip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Map python3 to python3.12
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+
+# Install PyTorch for CUDA 13.0
+RUN pip install --no-cache-dir torch==2.11.0 --index-url https://download.pytorch.org/whl/cu130 --break-system-packages
+
+RUN pip install torchvision==0.26.0 --index-url https://download.pytorch.org/whl/cu130 --no-deps --break-system-packages
+
+# Install the evaluation harness and dependencies
+RUN pip install --no-cache-dir lm-eval transformers evaluate accelerate gptqmodel --break-system-packages
+
+# The script is mounted via runtime volume, so no need to COPY here
+ENTRYPOINT ["python", "evaluate_models.py"]

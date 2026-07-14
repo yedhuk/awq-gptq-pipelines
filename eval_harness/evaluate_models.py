@@ -39,18 +39,51 @@ def run_benchmarks(model_path_or_id: str, output_path: str, is_quantized: bool =
     lm = HFLM(**model_kwargs)
 
     # 2. Define the exact benchmark tasks
-    tasks = ["wikitext", "mmlu", "gsm8k", "humaneval", "mbpp"]
+    # tasks = ["wikitext", "mmlu", "gsm8k", "humaneval", "mbpp"]
 
-    print(f"Starting evaluation on tasks: {tasks}")
+    task_configs = {
+        "wikitext": 0,
+        "mmlu": 5,      # Show 5 examples before asking the MMLU question
+        "gsm8k": 5,     # Show 5 examples before asking the GSM8K question
+        "humaneval": 0, # Code generation is typically evaluated zero-shot
+        "mbpp": 3       # Show 3 examples to stop it from being conversational
+    }
+
+    # print(f"Starting evaluation on tasks: {tasks}")
     
-    # 3. Execute the evaluation
-    results = lm_eval.simple_evaluate(
-        model=lm,
-        tasks=tasks,
-        num_fewshot=0,
-        log_samples=True,
-        confirm_run_unsafe_code=True,
-    )
+    # # 3. Execute the evaluation
+    # results = lm_eval.simple_evaluate(
+    #     model=lm,
+    #     tasks=tasks,
+    #     num_fewshot=None,
+    #     log_samples=True,
+    #     confirm_run_unsafe_code=True,
+    # )
+    print(f"Starting evaluation on tasks: {list(task_configs.keys())}")
+    
+    # 3. Execute the evaluation sequentially to support dynamic few-shot counts
+    master_results = {}
+    
+    for task_name, fewshot_count in task_configs.items():
+        print(f"\n--- Evaluating {task_name.upper()} ({fewshot_count}-shot) ---")
+        
+        task_result = lm_eval.simple_evaluate(
+            model=lm,                  # Reuse the model already loaded in VRAM
+            tasks=[task_name],         # Pass as a valid list of strings
+            num_fewshot=fewshot_count, # Apply the task-specific few-shot count
+            log_samples=True,
+            confirm_run_unsafe_code=True,
+        )
+        
+        # Merge the specific task's output into the master dictionary
+        if not master_results:
+            master_results = task_result
+        else:
+            master_results["results"].update(task_result.get("results", {}))
+            if "versions" in task_result:
+                master_results["versions"].update(task_result["versions"])
+            if "n-shot" in task_result:
+                master_results["n-shot"].update(task_result["n-shot"])
 
     output_dir = os.path.dirname(output_path)
     if output_dir:
@@ -58,14 +91,14 @@ def run_benchmarks(model_path_or_id: str, output_path: str, is_quantized: bool =
     # 4. Save the results
     print(f"Saving comprehensive results to {output_path}")
     with open(output_path, "w") as f:
-        json.dump(results, f, default=handle_non_serializable, indent=2)
+        json.dump(master_results, f, default=handle_non_serializable, indent=2)
 
     # 5. Print Summary
     print("\n" + "="*50)
     print("EVALUATION SUMMARY")
     print("="*50)
     
-    task_results = results.get("results", {})
+    task_results = master_results.get("results", {})
     for task_name, metrics in task_results.items():
         print(f"\nTask: {task_name.upper()}")
         for metric_name, value in metrics.items():

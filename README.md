@@ -16,6 +16,24 @@ Current focus: **FP16 vs INT4 AWQ vs INT4 GPTQ** on `meta-llama/Llama-3.2-3B-Ins
 
 ## Results
 
+### Task Evaluation
+
+<p>
+  <img src="https://raw.githubusercontent.com/yedhuk/awq-gptq-pipelines/main/eval_harness/plots/plot_core_benchmarks.png" alt="plot_core_benchmarks">
+</p>
+
+
+<p>
+  <img src="https://raw.githubusercontent.com/yedhuk/awq-gptq-pipelines/main/eval_harness/plots/plot_mmlu_breakdown.png" alt="plot_mmlu_breakdown">
+</p>
+
+
+<p>
+  <img src="https://raw.githubusercontent.com/yedhuk/awq-gptq-pipelines/main/eval_harness/plots/plot_perplexity.png" alt="plot_perplexity">
+</p>
+
+### Efficieny Evaluation
+
 | Metric Group / Name | FP16 Baseline | AWQ Custom | GPTQ Custom |
 |---|---|---|---|
 | **Baseline (Pre-Load)** | | | |
