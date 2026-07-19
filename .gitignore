@@ -4,3 +4,5 @@ deprecated/
 CLAUDE.md
 project.md
 *.log
+*.csv
+*.jsonl
